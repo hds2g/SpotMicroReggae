@@ -1,2 +1,0 @@
-# SpotMircoAI
-SpotMicro + AI
