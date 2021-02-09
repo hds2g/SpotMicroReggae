@@ -3,12 +3,10 @@ Simulation of SpotMicroAI and it's Kinematics
 Use a keyboard to see how it works
 Use keyboard-Button to switch betweek walk on static-mode
 """
-from os import system, name 
+from os import system, name
 import sys
-sys.path.append("..")
-
 import numpy as np
-import time 
+import time
 import math
 import datetime as dt
 import keyboard
@@ -24,61 +22,54 @@ from Common.multiprocess_kb import KeyInterrupt
 
 from kinematicMotion import TrottingGait
 
-rtime=time.time()
-env=environment()
+import platform
+import multiprocessing
+
+sys.path.append("..")
+rtime = time.time()
+env = environment()
+
 
 def reset():
     global rtime
-    rtime=time.time()    
+    rtime = time.time()
+
 
 def resetPose():
     # TODO: globals are bad
-    global joy_x, joy_z, joy_y, joy_rz,joy_z
+    global joy_x, joy_z, joy_y, joy_rz, joy_z
     joy_x, joy_y, joy_z, joy_rz = 128, 128, 128, 128
 
-# define our clear function 
+# define our clear function
+
+
 def consoleClear():
 
-    # for windows 
-    if name == 'nt': 
-        _ = system('cls') 
-  
-    # for mac and linux(here, os.name is 'posix') 
-    else: 
-        _ = system('clear') 
+    # for windows
+    if name == 'nt':
+        _ = system('cls')
 
-robot=spotmicroai.Robot(True,True,reset)
+    # for mac and linux(here, os.name is 'posix')
+    else:
+        _ = system('clear')
 
-spurWidth=robot.W/2+20
-stepLength=0
-stepHeight=72
-iXf=120
-iXb=-132
-
-IDheight = p.addUserDebugParameter("height", -40, 90, 20)
-
-Lp = np.array([[iXf, -100, spurWidth, 1], [iXf, -100, -spurWidth, 1],
-[-50, -100, spurWidth, 1], [-50, -100, -spurWidth, 1]])
-
-resetPose()
-trotting=TrottingGait()
 
 def main(id, command_status):
-    
-    s=False
+
+    s = False
 
     while True:
-        bodyPos=robot.getPos()
-        bodyOrn,_,_=robot.getIMU()
-        xr,yr,_= p.getEulerFromQuaternion(bodyOrn)
-        distance=math.sqrt(bodyPos[0]**2+bodyPos[1]**2)
+        bodyPos = robot.getPos()
+        bodyOrn, _, _ = robot.getIMU()
+        xr, yr, _ = p.getEulerFromQuaternion(bodyOrn)
+        distance = math.sqrt(bodyPos[0]**2+bodyPos[1]**2)
 
-        if distance>50:
+        if distance > 50:
             robot.resetBody()
-    
-        ir=xr/(math.pi/180)
-        
-        d=time.time()-rtime
+
+        ir = xr/(math.pi/180)
+
+        d = time.time()-rtime
         height = p.readUserDebugParameter(IDheight)
 
         # calculate robot step command from keyboard inputs
@@ -93,25 +84,67 @@ def main(id, command_status):
         else:
             robot.feetPosition(Lp)
 
-        roll=0
-        robot.bodyRotation((roll,math.pi/180*((joy_x)-128)/3,-(1/256*joy_y-0.5)))
+        roll = 0
+        robot.bodyRotation(
+            (roll, math.pi/180*((joy_x)-128)/3, -(1/256*joy_y-0.5)))
 
-        bodyX=50+yr*10
+        bodyX = 50+yr*10
         robot.bodyPosition((bodyX, 40+height, -ir))
 
         robot.step()
         consoleClear()
 
+
+robot = None
+
+
+def prepareSim():
+    robot = spotmicroai.Robot(True, True, reset)
+
+    spurWidth = robot.W/2+20
+    stepLength = 0
+    stepHeight = 72
+    iXf = 120
+    iXb = -132
+
+    IDheight = p.addUserDebugParameter("height", -40, 90, 20)
+
+    Lp = np.array([[iXf, -100, spurWidth, 1], [iXf, -100, -spurWidth, 1],
+                   [-50, -100, spurWidth, 1], [-50, -100, -spurWidth, 1]])
+
+
 if __name__ == "__main__":
+    if platform.system() == "Darwin":
+        multiprocessing.set_start_method('spawn')
+
+    # prepare sim
+    robot = spotmicroai.Robot(True, True, reset)
+
+    spurWidth = robot.W/2+20
+    stepLength = 0
+    stepHeight = 72
+    iXf = 120
+    iXb = -132
+
+    IDheight = p.addUserDebugParameter("height", -40, 90, 20)
+
+    Lp = np.array([[iXf, -100, spurWidth, 1], [iXf, -100, -spurWidth, 1],
+                   [-50, -100, spurWidth, 1], [-50, -100, -spurWidth, 1]])
+
+    resetPose()
+    trotting = TrottingGait()
+    # end of prepare sim
+
     try:
         # Keyboard input Process
         KeyInputs = KeyInterrupt()
-        KeyProcess = Process(target=KeyInputs.keyInterrupt, args=(1, KeyInputs.key_status, KeyInputs.command_status))
+        KeyProcess = Process(target=KeyInputs.keyInterrupt, args=(
+            1, KeyInputs.key_status, KeyInputs.command_status))
         KeyProcess.start()
 
-        # Main Process 
+        # Main Process
         main(2, KeyInputs.command_status)
-        
+
         print("terminate KeyBoard Input process")
         if KeyProcess.is_alive():
             KeyProcess.terminate()

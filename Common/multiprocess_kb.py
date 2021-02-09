@@ -7,19 +7,27 @@ another endless Loops
 import time
 import keyboard
 from multiprocessing import Process, Queue
+import platform
+import multiprocessing
 
 # keyboard Initialisation
 # Dictionary of keyboard controller buttons we want to include.
-key_value_default = {'w': 0, 'a': 0, 's': 0, 'd': 0, 'q': 0, 'e': 0, 'move': False }
-control_offset = {'IDstepLength': 0.0, 'IDstepWidth': 0.0, 'IDstepAlpha': 0.0, 'StartStepping': False }
+# w : front, s: back    (IDstepLength)
+# a : left?, d: right   (IDstepWidth)
+# q :   , e :           (IDstepAlpha)
+key_value_default = {'w': 0, 'a': 0, 's': 0,
+                     'd': 0, 'q': 0, 'e': 0, 'move': False}
+control_offset = {'IDstepLength': 0.0, 'IDstepWidth': 0.0,
+                  'IDstepAlpha': 0.0, 'StartStepping': False}
+
 
 class KeyInterrupt():
 
-    def __init__(self): 
+    def __init__(self):
         # How many times Keys Pushed
         self.key_status = Queue()
         self.key_status.put(key_value_default)
-        
+
         # Calculate Offset based on Key Status
         self.command_status = Queue()
         self.command_status.put(control_offset)
@@ -45,10 +53,13 @@ class KeyInterrupt():
     def calcRbStep(self):
         result_dict = self.key_status.get()
         command_dict = self.command_status.get()
-        command_dict['IDstepLength'] = self.X_STEP * result_dict['s'] - self.X_STEP * result_dict['w']
-        command_dict['IDstepWidth'] = self.Y_STEP * result_dict['d'] - self.Y_STEP * result_dict['a']
-        command_dict['IDstepAlpha'] = self.YAW_STEP * result_dict['q'] - self.YAW_STEP * result_dict['e']
-        
+        command_dict['IDstepLength'] = self.X_STEP * \
+            result_dict['s'] - self.X_STEP * result_dict['w']
+        command_dict['IDstepWidth'] = self.Y_STEP * \
+            result_dict['d'] - self.Y_STEP * result_dict['a']
+        command_dict['IDstepAlpha'] = self.YAW_STEP * \
+            result_dict['q'] - self.YAW_STEP * result_dict['e']
+
         if result_dict['move']:
             command_dict['StartStepping'] = True
         else:
@@ -57,10 +68,10 @@ class KeyInterrupt():
         self.key_status.put(result_dict)
         self.command_status.put(command_dict)
 
-    # Activated when Key Pressed, Doesn't support Hotkey 
+    # Activated when Key Pressed, Doesn't support Hotkey
     # Doesn't support more than two key pressing
     def keyInterrupt(self, id, key_status, command_status):
-        
+
         was_pressed = False
 
         while True:
@@ -98,6 +109,8 @@ class KeyInterrupt():
             self.calcRbStep()
 
 # Test Endless While Loop
+
+
 def testWhile(id, command_status):
     while True:
         result_dict = command_status.get()
@@ -105,11 +118,15 @@ def testWhile(id, command_status):
         command_status.put(result_dict)
         time.sleep(1)
 
+
 # Basic Usage
 if __name__ == "__main__":
+    if platform.system() == "Darwin":
+        multiprocessing.set_start_method('spawn')
     try:
         KeyTest = KeyInterrupt()
-        KeyProcess = Process(target=KeyTest.keyInterrupt, args=(1, KeyTest.key_status, KeyTest.command_status))
+        KeyProcess = Process(target=KeyTest.keyInterrupt, args=(
+            1, KeyTest.key_status, KeyTest.command_status))
 
         KeyProcess.start()
 
