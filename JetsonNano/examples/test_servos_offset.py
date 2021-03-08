@@ -9,11 +9,12 @@ import time
 # Bus 1 (pins 5, 3) is board SCL, SDA in the jetson definition file
 # Default is to Bus 1; We are using Bus 0, so we need to construct the busio first ...
 print("Initializing Servos")
-i2c_bus0=(busio.I2C(board.SCL_1, board.SDA_1))
+i2c_bus0 = (busio.I2C(board.SCL_1, board.SDA_1))
 print("Initializing ServoKit")
 
 pca = list()
 pca.append(PCA9685(i2c_bus0, address=0x40))
+pca.append(PCA9685(i2c_bus0, address=0x41))
 pca[-1].frequency = 60
 # pca.append(PCA9685(i2c_bus0, address=0x41))
 # pca[-1].frequency = 60
@@ -23,12 +24,13 @@ pca[-1].frequency = 60
 print("Done initializing")
 
 # [0]~[2] : FL // [3]~[5] : FR // [6]~[8] : RL // [9]~[11] : RR
-val_list = [90, 90]
-# val_list = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
+#val_list = [90, 90]
+val_list = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
 
 servos = list()
 for i in range(len(val_list)):
-    servos.append(servo.Servo(pca[int(i/6)].channels[int(i%6)], min_pulse=460, max_pulse=2440))
+    servos.append(servo.Servo(
+        pca[int(i/6)].channels[int(i % 6)], min_pulse=460, max_pulse=2440))
     # servos.append(servo.Servo(pca[int(i/6)].channels[int(i%6)], min_pulse=771, max_pulse=2740))
 
 
@@ -38,16 +40,24 @@ if __name__ == '__main__':
 
     while True:
         # num is index of motor to rotate
-        num=int(input("Enter Servo to rotate (0-11): "))
-        
+        num = int(input("Enter Servo to rotate (0-11): "))
+        if(num > 11 and num < 0):
+            print("wrong input number")
+            continue
+
         # new angle to be written on selected motor
-        angle=int(input("Enter new angles (0-180): "))
+        angle = int(input("Enter new angles (0-180): "))
+        if(angle > 180 and angle < 0):
+            print("wrong angle input")
+            continue
+
         prev_angle = val_list[num]
-        
+
         # increase(decrease) prev_angle to angle by 1 degree
-        sweep = range(prev_angle, angle, 1) if (prev_angle < angle) else range(prev_angle, angle, -1)
+        sweep = range(prev_angle, angle, 1) if (
+            prev_angle < angle) else range(prev_angle, angle, -1)
         for degree in sweep:
-            servos[num].angle=degree
+            servos[num].angle = degree
             time.sleep(0.01)
 
         val_list[num] = angle
