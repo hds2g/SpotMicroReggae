@@ -1,24 +1,30 @@
-import numpy as np
-import os
 import time
-import sys
-sys.path.append("..")
-import Kinematics.kinematics as kn  # noqa: E402
-
-# PCTEST
+# To test on PC, not Jetson
 # import busio
 # import board
 # from adafruit_servokit import ServoKit
+import numpy as np
+import sys
+sys.path.append("..")
+
+import Kinematics.kinematics as kn  # noqa: E402
 
 
 class Controllers:
     def __init__(self):
-        # PCTEST
+
+        # To test on PC, not Jetson
         # print("Initializing Servos")
         # self._i2c_bus0 = (busio.I2C(board.SCL_1, board.SDA_1))
         # print("Initializing ServoKit")
         # self._kit = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x40)
+        # # set min/max pulse, need to change them depend on Servo mortor
+        # self._kit.set_pulse_width_range(500, 2500)
+
         # self._kit2 = ServoKit(channels=16, i2c=self._i2c_bus0, address=0x41)
+        # self._kit2.set_pulse_width_range(500, 2500)
+        self._kit = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
+
         # print("Done initializing")
 
         # 1 by 12 array
@@ -49,18 +55,15 @@ class Controllers:
                                1, 90, 90,
                                180, 90, 90,
                                1, 90, 90]
-        # self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
+
+        #self._servo_offsets = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
 
         self._val_list = np.zeros(12)  # [ x for x in range(12) ]
 
         # All Angles for Leg 3 * 4 = 12 length
         self._thetas = []
 
-        # real input value to servo morter
-        self._kit = np.zeros(12)
-
     def getDegreeAngles(self, La):
-        # print(La)
         # radian to degree
         La *= 180/np.pi
         La = [[int(x) for x in y] for y in La]
@@ -90,8 +93,6 @@ class Controllers:
         self._val_list[6] = self._servo_offsets[6] - self._thetas[2][2]
         # BL Upper
         self._val_list[7] = self._servo_offsets[7] - self._thetas[2][1]
-        # print(self._val_list[7])
-
         # BL Shoulder, Formula flipped from the front
         self._val_list[8] = self._servo_offsets[8] - self._thetas[2][0]
 
@@ -106,66 +107,50 @@ class Controllers:
         return self._val_list
 
     def servoRotate(self, thetas):
-        #print("----------- servoRotate -------------")
         self.angleToServo(thetas)
         # self.angleToServo(np.zeros((4,3)))
         for x in range(len(self._val_list)):
 
             if x >= 0 and x < 12:
                 #self._val_list[x] = (self._val_list[x]-26.36)*(1980/1500)
-                # print(self._val_list[x])
 
-                # print(self._val_list[x], end=' ')
-                # if x%3 == 2: print()
-
+                print(self._val_list[x], end=' ')
+                if x % 3 == 2:
+                    print()
                 # print(self._val_list[x])
 
                 if (self._val_list[x] > 180):
-                    print("Over 180!! ", self._val_list[x])
-
+                    print("Over 180!!", end=' ')
                     self._val_list[x] = 179
                     continue
                 if (self._val_list[x] <= 0):
-                    print("Under 0!! ", self._val_list[x])
+                    print("Under 0!!", end=' ')
                     self._val_list[x] = 1
                     continue
-# PCTEST
+
+                 # To test on PC, not Jetson
                 # if x < 6:
                 #     self._kit.servo[x].angle = self._val_list[x]
                 # else:
                 #     self._kit2.servo[x].angle = self._val_list[x]
-                self._kit[x] = self._val_list[x]
-                # print(x)
-                # if x < 6:
-                #     print("-kit1---")
-                #     print('%d: %d' % (x, self._val_list[x]))
-                # else:
-                #     print("-kit2---")
-                #     print('%d: %d' % (x, self._val_list[x]))
+                self._kit.append(self._val_list[x])
 
 
 if __name__ == "__main__":
-    # x, y, z
-    legEndpoints = np.array([[100, -100, 100, 1], [100, -100, -100, 1],
-                             [-100, -100, 100, 1], [-100, -100, -100, 1]])
+    legEndpoints = np.array([[100, -100, 87.5, 1], [100, -100, -87.5, 1],
+                             [-100, -100, 87.5, 1], [-100, -100, -87.5, 1]])
     thetas = kn.initIK(legEndpoints)  # radians
+
     print(thetas)
-    print()
     controller = Controllers()
 
     # Get radian thetas, transform to integer servo angles
     # then, rotate servos
     controller.servoRotate(thetas)
-    print("_thetas(radian)")
-    print(controller._thetas)
 
     # Get AngleValues for Debugging
     svAngle = controller.getServoAngles()
-    print("svAngle(degree)")
     print(svAngle)
 
-    print("_kit(servo)")
-    print(controller._kit)
-    # print(len(controller._kit))
     # #plot at the end
     kn.plotKinematics()

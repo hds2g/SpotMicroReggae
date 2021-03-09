@@ -30,7 +30,7 @@ val_list = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
 servos = list()
 for i in range(len(val_list)):
     servos.append(servo.Servo(
-        pca[int(i/6)].channels[int(i % 6)], min_pulse=460, max_pulse=2440))
+        pca[int(i/6)].channels[int(i % 6)], min_pulse=500, max_pulse=2500))
     # servos.append(servo.Servo(pca[int(i/6)].channels[int(i%6)], min_pulse=771, max_pulse=2740))
 
 
